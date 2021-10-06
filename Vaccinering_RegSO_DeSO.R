@@ -48,6 +48,7 @@ dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna täckning per DeSo 21
       inner_join(dt1, by=c("Deso" = "Deso")) %>%
   ggplot() + 
     geom_sf(aes(fill =`Minst 1 dos, andel`))+  
+    geom_sf(data = sf_kommuner_dalarna, fill = NA, color = "black", linetype = "dashed")+
     scale_fill_viridis_c(option = "plasma", direction=1)+
     theme_minimal()+
     theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
