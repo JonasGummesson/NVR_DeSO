@@ -26,8 +26,41 @@ dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna täckning per DeSo 21
   mutate(`Minst 1 dos, andel` = `Minst 1 dos` / totalt,
          `2 doser, andel` = `2 doser` / totalt)
 
-  dt1  
+  
+dt2 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
+  rename(två.doser = X2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  =DeSO.kod) %>%
+  separate(två.doser, sep = "-", into = c("två.doser.lower", "två.doser.higher"), remove = FALSE) %>%
+  separate(minst.en.dos, sep = "-", into = c("minst.en.dos.lower", "minst.en.dos.higher"), remove = FALSE) %>%
+  mutate(minst.en.dos1 = fct_reorder(minst.en.dos, desc(minst.en.dos.lower))) %>%
+  mutate(period = as.POSIXct("2021-09-03"))%>%
+  mutate(minst.en.dos.lower = as.integer(minst.en.dos.lower))
+  
+dt2
 
+
+  dt3 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-29.csv", sep=";", header=TRUE, skip=1) %>%
+    rename(två.doser = X2.doser..,
+           minst.en.dos = Minst.1.dos..,
+           Deso  =DeSO.kod) %>%
+    #mutate(två.doser.split = två.doser, minst.en.dos.split = minst.en.dos) %>%
+    separate(två.doser, sep = "-", into = c("två.doser.lower", "två.doser.higher"), remove = FALSE) %>%
+    separate(minst.en.dos, sep = "-", into = c("minst.en.dos.lower", "minst.en.dos.higher"), remove = FALSE) %>%
+    mutate(minst.en.dos1 = fct_reorder(minst.en.dos, desc(minst.en.dos.lower))) %>%
+    mutate(period = as.POSIXct("2021-09-29")) %>%
+    mutate(minst.en.dos.lower = as.integer(minst.en.dos.lower))
+    #head(5)
+  dt3
+  
+  #dt <- rbind(dt2, dt3)
+  
+  dt <- dt2 %>%
+    select(Deso, Ålder, minst.en.dos.lower) %>%
+    rename(minst.en.dos.lower.fg = minst.en.dos.lower) %>%
+    inner_join(dt3 %>% select(Deso, Ålder, minst.en.dos.lower), by = c("Deso" = "Deso", "Ålder" = "Ålder")) %>%
+    mutate(FörändringPct = minst.en.dos.lower - minst.en.dos.lower.fg)
+  
   ################## ladda kommunkartor #################
   
   sf_kommuner_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kommungränser_Dalarna") %>%
@@ -55,6 +88,34 @@ dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna täckning per DeSo 21
     theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     facet_grid(~Ålder)
+  
+  
+  sf_deso_dalarna %>%
+    inner_join(dt3, by=c("Deso" = "Deso")) %>%
+    ggplot() + 
+    geom_sf(aes(fill = minst.en.dos))+  
+    geom_sf(data = sf_kommuner_dalarna, fill = NA, color = "black", linetype = "dashed")+
+    scale_fill_viridis_d(option = "plasma", direction=1)+
+    theme_minimal()+
+    theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
+    theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    facet_grid(~Ålder)
+  
+  # diffplot
+  
+  sf_deso_dalarna %>%
+    inner_join(dt, by=c("Deso" = "Deso")) %>%
+    ggplot() + 
+    geom_sf(aes(fill = FörändringPct))+  
+    geom_sf(data = sf_kommuner_dalarna, fill = NA, color = "black", linetype = "dashed")+
+    scale_fill_viridis_c(option = "plasma", direction=1)+
+    theme_minimal()+
+    theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
+    theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
+    theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+    facet_grid(~Ålder)
+  
   
   
   
