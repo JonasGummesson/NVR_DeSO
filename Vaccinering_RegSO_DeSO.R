@@ -2,7 +2,7 @@
 library(sjmisc)
 library(sf)
 library(viridis)
-
+library(htmlTable)
 # test
 
 
@@ -90,18 +90,25 @@ dt2
     facet_grid(~Ålder)
   
   
+  
   sf_deso_dalarna %>%
     inner_join(dt3, by=c("Deso" = "Deso")) %>%
+    select(Deso, Ålder, två.doser, minst.en.dos) %>%
+    pivot_longer(cols = c("två.doser", "minst.en.dos"), names_to = "Doser", values_to = "Andel") %>%
     ggplot() + 
-    geom_sf(aes(fill = minst.en.dos))+  
+    geom_sf(aes(fill = Andel))+  
     geom_sf(data = sf_kommuner_dalarna, fill = NA, color = "black", linetype = "dashed")+
     scale_fill_viridis_d(option = "plasma", direction=1)+
     theme_minimal()+
     theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
     theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-    facet_grid(~Ålder)
+    facet_wrap(~Ålder+Doser)
   
+
+  
+  
+  grid.arrange(p1,p2, )
   # diffplot
   
   sf_deso_dalarna %>%
@@ -115,6 +122,13 @@ dt2
     theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
     theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
     facet_grid(~Ålder)
+  
+  dt %>% 
+    select(Deso, Ålder, FörändringPct) %>%
+    pivot_wider(id_cols = Deso, names_from = Ålder, values_from = FörändringPct) %>%
+    arrange(desc(`18-64`)) %>%
+    tidyHtmlTable(cgroup = Ålder,rnames = Deso)
+  
   
   
   
