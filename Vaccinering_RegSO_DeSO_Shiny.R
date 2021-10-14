@@ -4,6 +4,7 @@ library(sf)
 library(viridis)
 library(htmlTable)
 library(shiny)
+library(kableExtra)
 
 dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
   rename(två.doser = X2.doser..,
@@ -88,16 +89,38 @@ sf_result_regso <-
          RegSO_y = st_coordinates(st_centroid(geometry))[,2])
 
 
-sf_result_regso %>%
+#t <- 
+  sf_result_regso %>%
   as.data.table() %>%
   filter(Period == as.POSIXct("2021-09-29")) %>%
-  filter(RegSO == "Ludvika norra") %>%
+  #filter(RegSO == "Ludvika norra") %>%
   select(Period, Ålder, Doser, RegSO, Intervall, Skillnad.fg.månad) %>%
   mutate(Skillnad.fg.månad = round(Skillnad.fg.månad,1)) %>%
-  mutate(Doser = iconv(Doser, "1252", "UTF-8")) %>%
-  htmlTable()
+  #dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>%
+  #dplyr::mutate_if(is.character, .funs = function(x){iconv(x, from = "1252", to = "UTF-8")})%>%
+  select(RegSO, Ålder, Doser, Intervall) %>%
+    pivot_wider(names_from = c(Ålder, Doser), values_from = Intervall)
+ # kbl()
+    kbl(row.names= TRUE, col.names = c("RegSO", "Ålder", "Doser", "Intervall"))
+  #?kbl
+#addHtmlTableStyle(align = "r") %>% 
+  #tidyHtmlTable(value = Intervall,
+    #  header =  Doser,
+    #            cgroup = Ålder,
+     #           rnames = RegSO)
+                #rgroup = per_metric)
 
 
+t %>%
+  kbl() %>%
+  kable_paper("hover", full_width = F)
+
+colnames(t) <- iconv(colnames(t), from = "1252", to = "UTF-8")
+t %>% addHtmlTableStyle(align = "r") %>% 
+  tidyHtmlTable(value = Intervall,
+                header =  Doser,
+                cgroup = Ålder,
+                rnames = RegSO)
 
 #sf_result %>% {if(length(list("1", "2")>0)) filter(.,KOMMUNNAMN %in% c("Avesta","3")) }
 
