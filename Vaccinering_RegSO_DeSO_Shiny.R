@@ -5,6 +5,8 @@ library(viridis)
 library(htmlTable)
 library(shiny)
 library(kableExtra)
+library(tidyverse)
+library(data.table)
 
 dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
   rename(två.doser = X2.doser..,
