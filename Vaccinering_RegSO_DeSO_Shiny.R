@@ -1,4 +1,4 @@
-# visualisering av data frÂn Nationella vaccinationsregistret
+# visualisering av data fr√•n Nationella vaccinationsregistret
 library(sjmisc)
 library(sf)
 library(viridis)
@@ -7,39 +7,45 @@ library(shiny)
 library(kableExtra)
 library(tidyverse)
 library(data.table)
+library(stringi)
+library(ggrepel)
+#install.packages("htmlTable")
 
 dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
-  rename(tvÂ.doser = X2.doser..,
+  rename(tv√•.doser = X2.doser..,
          minst.en.dos = Minst.1.dos..,
          Deso  =DeSO.kod) %>%
   mutate(Period = as.POSIXct("2021-09-03"))
-  
+
+
+
+
 dt2 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-29.csv", sep=";", header=TRUE, skip=1) %>%
-  rename(tvÂ.doser = X2.doser..,
+  rename(tv√•.doser = X2.doser..,
          minst.en.dos = Minst.1.dos..,
          Deso  =DeSO.kod) %>%
   mutate(Period = as.POSIXct("2021-09-29"))
-  
+
 
 # union datasets
 dt <- 
   rbind(
-    dt1 %>% select(Period, Deso, ≈lder, minst.en.dos, tvÂ.doser),
-    dt2 %>% select(Period, Deso, ≈lder, minst.en.dos, tvÂ.doser)
+    dt1 %>% select(Period, Deso, √Ölder, minst.en.dos, tv√•.doser),
+    dt2 %>% select(Period, Deso, √Ölder, minst.en.dos, tv√•.doser)
   ) %>%
-  pivot_longer(cols = c(minst.en.dos, tvÂ.doser), names_to = "Doser", values_to = "Intervall") %>%
-  separate(Intervall, sep = "-", into = c("Intervall.lÂg", "Intervall.hˆg"), remove = FALSE) %>%
-  mutate(Intervall.lÂg = as.integer(Intervall.lÂg),
-         Intervall.hˆg = as.integer(Intervall.hˆg)) %>%
-  group_by(Deso, ≈lder, Doser) %>%
-  mutate(Intervall.lÂg.fg = lag(Intervall.lÂg, n = 1, order_by = Period)) %>%
-  mutate(Skillnad.fg.mÂnad = Intervall.lÂg - Intervall.lÂg.fg)
-  
+  pivot_longer(cols = c(minst.en.dos, tv√•.doser), names_to = "Doser", values_to = "Intervall") %>%
+  separate(Intervall, sep = "-", into = c("Intervall.l√•g", "Intervall.h√∂g"), remove = FALSE) %>%
+  mutate(Intervall.l√•g = as.integer(Intervall.l√•g),
+         Intervall.h√∂g = as.integer(Intervall.h√∂g)) %>%
+  group_by(Deso, √Ölder, Doser) %>%
+  mutate(Intervall.l√•g.fg = lag(Intervall.l√•g, n = 1, order_by = Period)) %>%
+  mutate(Skillnad.fg.m√•nad = Intervall.l√•g - Intervall.l√•g.fg)
+
 
 
 ################## ladda kommunkartor #################
 
-sf_kommuner_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kommungr‰nser_Dalarna") %>%
+sf_kommuner_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kommungr√§nser_Dalarna") %>%
   st_set_crs(3006) %>%
   mutate(KOMMUNNAMN = iconv(KOMMUNNAMN, "1252", "UTF-8"))
 
@@ -70,63 +76,44 @@ sf_result <-
   sf_deso_dalarna %>%
   inner_join(dt, by=c("Deso" = "Deso")) %>%
   inner_join(sf_kommuner_dalarna %>% as.data.table() %>% select(KOMMUNNAMN, KOMMUNKOD) %>% mutate(Kommunkod = as.integer(KOMMUNKOD)), by=c("Kommunkod" = "Kommunkod"))
-  
+
 sf_result_regso <-
   sf_regso_dalarna %>%
-
   inner_join(
     dt %>% 
       inner_join(
         dt_koppling %>% select(DeSO, RegSO), by=c("Deso" = "DeSO")) %>%
-      group_by(Period, ≈lder, Doser, RegSO) %>%
+      group_by(Period, √Ölder, Doser, RegSO) %>%
       #filter(RegSO == "Ludvika norra") %>%
-      summarise(Intervall.hˆg = mean(Intervall.hˆg), 
-                Intervall.lÂg = mean(Intervall.lÂg),
-                Skillnad.fg.mÂnad = mean(Skillnad.fg.mÂnad)) %>%
-    mutate(Intervall = paste0(as.character(round(Intervall.lÂg,1)), "-", as.character(round(Intervall.hˆg,1))))
+      summarise(Intervall.h√∂g = mean(Intervall.h√∂g), 
+                Intervall.l√•g = mean(Intervall.l√•g),
+                Skillnad.fg.m√•nad = mean(Skillnad.fg.m√•nad)) %>%
+      mutate(Intervall = paste0(as.character(round(Intervall.l√•g,1)), "-", as.character(round(Intervall.h√∂g,1))))
     ,by=c("RegSO" = "RegSO")) %>%
   inner_join(sf_kommuner_dalarna %>% as.data.table() %>% select(KOMMUNNAMN, KOMMUNKOD) %>% mutate(Kommunkod = as.integer(KOMMUNKOD)), by=c("Kommunkod" = "Kommunkod"))%>%
- 
+  
   mutate(RegSO_x = st_coordinates(st_centroid(geometry))[,1],
-         RegSO_y = st_coordinates(st_centroid(geometry))[,2])
+         RegSO_y = st_coordinates(st_centroid(geometry))[,2]) %>%
+  mutate(Doser = recode(Doser, "tv√•.doser" = "2 doser", "minst.en.dos" = "Minst 1 dos"))
 
 
-#t <- 
-  sf_result_regso %>%
-  as.data.table() %>%
-  filter(Period == as.POSIXct("2021-09-29")) %>%
+sf_result_regso %>%
+  #as.data.table() %>%
+  as_tibble() %>%
+  #filter(Period == as.POSIXct("2021-09-29")) %>%
   #filter(RegSO == "Ludvika norra") %>%
-  select(Period, ≈lder, Doser, RegSO, Intervall, Skillnad.fg.mÂnad) %>%
-  mutate(Skillnad.fg.mÂnad = round(Skillnad.fg.mÂnad,1)) %>%
-  #dplyr::mutate_if(is.character, .funs = function(x){return(`Encoding<-`(x, "UTF-8"))})%>%
-  #dplyr::mutate_if(is.character, .funs = function(x){iconv(x, from = "1252", to = "UTF-8")})%>%
-  select(RegSO, ≈lder, Doser, Intervall) %>%
-    pivot_wider(names_from = c(≈lder, Doser), values_from = Intervall)
- # kbl()
-    kbl(row.names= TRUE, col.names = c("RegSO", "≈lder", "Doser", "Intervall"))
-  #?kbl
+  select(Period, √Ölder, Doser, RegSO, Intervall, Skillnad.fg.m√•nad) %>%
+  mutate(Skillnad.fg.m√•nad = round(Skillnad.fg.m√•nad,1)) %>%
+  mutate(RegSO = iconv(RegSO, to = "UTF-8")) %>%
+  select(RegSO, √Ölder, Doser, Intervall) #%>%
+
 #addHtmlTableStyle(align = "r") %>% 
-  #tidyHtmlTable(value = Intervall,
-    #  header =  Doser,
-    #            cgroup = ≈lder,
-     #           rnames = RegSO)
-                #rgroup = per_metric)
+#  tidyHtmlTable(value = Intervall,
+#                header =  Doser,
+#                cgroup = √Ölder,
+#                rnames = RegSO)
 
 
-t %>%
-  kbl() %>%
-  kable_paper("hover", full_width = F)
-
-colnames(t) <- iconv(colnames(t), from = "1252", to = "UTF-8")
-t %>% addHtmlTableStyle(align = "r") %>% 
-  tidyHtmlTable(value = Intervall,
-                header =  Doser,
-                cgroup = ≈lder,
-                rnames = RegSO)
-
-#sf_result %>% {if(length(list("1", "2")>0)) filter(.,KOMMUNNAMN %in% c("Avesta","3")) }
-
-#?filter_if
 options(shiny.reactlog=TRUE)
 ui <- fluidPage(
   titlePanel(
@@ -134,30 +121,31 @@ ui <- fluidPage(
   ),
   sidebarLayout(
     sidebarPanel( 
-      radioButtons(inputId = "Âlder",
-                         label = "≈lder",
-                         choices = list("18-64","65+"),
-                         selected = c("18-64")),
+      radioButtons(inputId = "√•lder",
+                   label = "√Ölder",
+                   choices = list("18-64","65+"),
+                   selected = c("18-64")),
       radioButtons(inputId = "doser",
-                         label = "Doser",
-                         choices = list("minst.en.dos","tvÂ.doser"),
-                         selected = c("minst.en.dos")),
+                   label = "Doser",
+                   choices = list("Minst 1 dos","2 doser"),
+                   selected = c("Minst 1 dos")),
       radioButtons(inputId = "kommun",
                    label = "Kommun",
                    choices = append("Alla", unique(sf_kommuner_dalarna$KOMMUNNAMN)),
                    selected = "Alla"),
       radioButtons(inputId = "datum",
                    label = "Datum",
-                   choices = unique(sf_result$period),
+                   choices = unique(sf_result$Period),
                    selected = sf_result$period[1])
     ),
     mainPanel(   
       tabsetPanel(type = "tabs",
-                  tabPanel("Aktuellt l‰ge", 
-                           plotOutput("kartaAktuelltL‰ge", width = "100%", height = "800px")
+                  tabPanel("Aktuellt l√§ge", 
+                           plotOutput("kartaAktuelltL√§ge", width = "100%", height = "800px"),
+                           htmlOutput("tabellAktuelltL√§ge")
                   ),
-                  tabPanel("Fˆr‰ndring sedan fˆregÂende mÂnad", 
-                           plotOutput("kartaFˆr‰ndring", width = "100%", height = "800px")
+                  tabPanel("F√∂r√§ndring sedan f√∂reg√•ende m√•nad", 
+                           plotOutput("kartaF√∂r√§ndring", width = "100%", height = "800px")
                   )
       )
     )
@@ -169,28 +157,26 @@ server <- function(input, output) {
   
   sf_result_filtered <- reactive({ 
     sf_result %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
-      filter(period == input$datum) %>%
-      select(Deso, ≈lder, Doser, Intervall, fˆr‰ndring)
+      filter(Period == input$datum) %>%
+      select(Deso, √Ölder, Doser, Intervall, Skillnad.fg.m√•nad)
   })
   
   
   sf_result_regso_filtered <- reactive({ 
     sf_result_regso %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
-      filter(period == input$datum) %>%
+      #filter(Period == input$datum) %>%
       filter(Doser %in% input$doser) %>%
-      filter(≈lder %in% input$Âlder) %>%
-      select(regso, ≈lder, Doser, Intervall, fˆr‰ndring, RegSO_x, RegSO_y)
+      filter(√Ölder %in% input$√•lder) %>%
+      select(RegSO, √Ölder, Doser, Intervall, Skillnad.fg.m√•nad, RegSO_x, RegSO_y)
   })
   
- 
-  
-  output$kartaAktuelltL‰ge <- renderPlot({
+  output$kartaAktuelltL√§ge <- renderPlot({
     sf_result_regso_filtered()  %>%
       ggplot() + 
       geom_sf(aes(fill = Intervall))+  
-      {if(input$kommun != "Alla") geom_text_repel(aes(label = regso,  x = RegSO_x, y = RegSO_y), color = "blue", size=4, max.overlaps = 1000, color = "white")   }+
+      {if(input$kommun != "Alla") geom_text_repel(aes(label = RegSO,  x = RegSO_x, y = RegSO_y), force=5, size=4, max.overlaps = 1000, color = "blue")   }+
       scale_fill_viridis_d(option = "plasma", direction=1)+
-      #{ if(length(unique(sf_result_regso_filtered()$≈lder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(≈lder), rows = vars(Doser)) }+
+      #{ if(length(unique(sf_result_regso_filtered()$√Ölder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(√Ölder), rows = vars(Doser)) }+
       theme_minimal()+
       theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
       theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
@@ -198,17 +184,30 @@ server <- function(input, output) {
     
   })
   
-  output$kartaFˆr‰ndring <- renderPlot({
+  output$tabellAktuelltL√§ge <- renderUI({
+    sf_result_regso  %>%
+      filter(Period == as.POSIXct("2021-09-29"))%>%
+      as.data.table() %>%
+      #mutate(RegSO = iconv(RegSO, to = "UTF-8")) %>%
+      
+      addHtmlTableStyle(align = "r") %>% 
+        tidyHtmlTable(value = Intervall,
+                      header =  Doser,
+                      cgroup = √Ölder,
+                      rnames = RegSO)
+  })
+  
+  output$kartaF√∂r√§ndring <- renderPlot({
     sf_result_regso_filtered()  %>%
       ggplot() + 
-      geom_sf(aes(fill = fˆr‰ndring))+  
+      geom_sf(aes(fill = Skillnad.fg.m√•nad))+  
       scale_fill_viridis_c(option = "plasma", direction=1)+
-      #{ if(length(unique(sf_result_regso_filtered()$≈lder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(≈lder), rows = vars(Doser)) }+
+      #{ if(length(unique(sf_result_regso_filtered()$√Ölder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(√Ölder), rows = vars(Doser)) }+
       theme_minimal()+
       theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
       theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
       theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
-     
+    
     
   })
 }

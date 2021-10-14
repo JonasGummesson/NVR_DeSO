@@ -10,7 +10,6 @@ library(htmlTable)
 
 dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna täckning per DeSo 210705.csv", sep=";", header=TRUE, skip=1) %>%
   select(1:5, X.65.år, X65.plus) %>%
-  #pivot_longer(cols = 2:5, names_to = "Variabel", values_to = "Antal") %>%
   rename(Deso = Radetiketter,
          minst.en.dos.0_64 = minst.en.dos,
          två.doser.0_64 = X2.doser,
