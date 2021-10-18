@@ -9,7 +9,6 @@ library(tidyverse)
 library(data.table)
 library(stringi)
 library(ggrepel)
-#install.packages("htmlTable")
 
 dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
   rename(två.doser = X2.doser..,
@@ -39,9 +38,9 @@ dt <-
          Intervall.hög = as.integer(Intervall.hög)) %>%
   group_by(Deso, Ålder, Doser) %>%
   mutate(Intervall.låg.fg = lag(Intervall.låg, n = 1, order_by = Period)) %>%
-  mutate(Skillnad.fg.månad = Intervall.låg - Intervall.låg.fg)
+  mutate(Skillnad.fg.månad = Intervall.låg - Intervall.låg.fg) 
 
-
+#dt %>% filter(Period == as.POSIXct("2021-09-29"))
 
 ################## ladda kommunkartor #################
 
@@ -124,7 +123,7 @@ ui <- fluidPage(
       radioButtons(inputId = "datum",
                    label = "Datum",
                    choices = unique(sf_result$Period),
-                   selected = sf_result$period[1])
+                   selected = as.POSIXct("2021-09-29"))
     ),
     mainPanel(   
       tabsetPanel(type = "tabs",
@@ -133,7 +132,8 @@ ui <- fluidPage(
                            htmlOutput("tabellAktuelltLäge")
                   ),
                   tabPanel("Förändring sedan föregående månad", 
-                           plotOutput("kartaFörändring", width = "100%", height = "800px")
+                           plotOutput("kartaFörändring", width = "100%", height = "800px"),
+                           htmlOutput("tabellFörändring")
                   )
       )
     )
@@ -143,11 +143,11 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   
-  sf_result_filtered <- reactive({ 
-    sf_result %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
-      filter(Period == input$datum) %>%
-      select(Deso, Ålder, Doser, Intervall, Skillnad.fg.månad)
-  })
+ # sf_result_filtered <- reactive({ 
+#    sf_result %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
+#      filter(Period == input$datum) %>%
+#      select(Deso, Ålder, Doser, Intervall, Skillnad.fg.månad)
+#  })
   
   
   sf_result_regso_filtered <- reactive({ 
@@ -161,16 +161,18 @@ server <- function(input, output) {
   sf_result_regso_filtered_kommun <- reactive({ 
     sf_result_regso %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
       filter(Period == input$datum) %>%
+      mutate_if(is.numeric, round, 1) %>%
       select(RegSO, Ålder, Doser, Intervall, Skillnad.fg.månad, RegSO_x, RegSO_y)
   })
+  
+  
   
   output$kartaAktuelltLäge <- renderPlot({
     sf_result_regso_filtered()  %>%
       ggplot() + 
       geom_sf(aes(fill = Intervall))+  
-      {if(input$kommun != "Alla") geom_text_repel(aes(label = RegSO,  x = RegSO_x, y = RegSO_y), force=5, size=4, max.overlaps = 1000, color = "blue")   }+
-      scale_fill_viridis_d(option = "plasma", direction=1)+
-      #{ if(length(unique(sf_result_regso_filtered()$Ålder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(Ålder), rows = vars(Doser)) }+
+      {if(input$kommun != "Alla") geom_label_repel(aes(label = RegSO,  x = RegSO_x, y = RegSO_y), force=50, size=4, max.overlaps = 1000, color = "black")   }+
+      scale_fill_viridis_d(option = "magma", direction=1)+
       theme_minimal()+
       theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
       theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
@@ -192,8 +194,8 @@ server <- function(input, output) {
     sf_result_regso_filtered()  %>%
       ggplot() + 
       geom_sf(aes(fill = Skillnad.fg.månad))+  
-      scale_fill_viridis_c(option = "plasma", direction=1)+
-      #{ if(length(unique(sf_result_regso_filtered()$Ålder)) > 1 || length(unique(sf_result_regso_filtered()$Doser)) > 1) facet_grid(cols = vars(Ålder), rows = vars(Doser)) }+
+      {if(input$kommun != "Alla") geom_label_repel(aes(label = RegSO,  x = RegSO_x, y = RegSO_y), force=50, size=4, max.overlaps = 1000, color = "black")   }+
+      scale_fill_viridis_c(option = "magma", direction=1)+
       theme_minimal()+
       theme(axis.title.x=element_blank(),axis.text.x=element_blank(),axis.ticks.x=element_blank())+
       theme(axis.title.y=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank())+
@@ -201,12 +203,22 @@ server <- function(input, output) {
     
     
   })
+  
+  output$tabellFörändring <- renderUI({
+    sf_result_regso_filtered_kommun()  %>%
+      as.data.table() %>%
+      addHtmlTableStyle(align = "r") %>%
+      tidyHtmlTable(value = Skillnad.fg.månad,
+                    header =  Doser,
+                    cgroup = Ålder,
+                    rnames = RegSO)
+  })
 }
 
 shinyApp(ui = ui, server = server)
 
 
-
+#?scale_fill_viridis_d
 
 
 
