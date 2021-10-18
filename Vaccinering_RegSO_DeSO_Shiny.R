@@ -50,7 +50,6 @@ sf_kommuner_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kommungränser_Dalarna"
   mutate(KOMMUNNAMN = iconv(KOMMUNNAMN, "1252", "UTF-8"))
 
 
-
 ################## Ladda DeSO #################
 sf_deso_dalarna <- st_read(dsn = "E:/Filer/admgumjon/deso_shp_fixed") %>%
   st_set_crs(3006) %>%
@@ -63,12 +62,14 @@ sf_regso_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kartor/RegSO_2018") %>%
   filter(startsWith(kommun, "20")) %>%
   rename(RegSO = regso) %>%
   rename(Kommunkod = kommun) %>%
-  mutate(Kommunkod = as.integer(Kommunkod))
+  mutate(Kommunkod = as.integer(Kommunkod)) %>%
+  mutate(RegSO = str_trim(RegSO))
 
 ################## Koppling RegSO/DeSO #################
 dt_koppling <- read.csv("E:/Filer/admgumjon/Kartor/kopplingstabell-deso-regso-20210702-v2.csv", skip=3, sep=";") %>% #head(15) %>%
   rename(Kommunkod = bro) %>%
-  select(Kommunkod, Kommunnamn, DeSO, RegSO)
+  select(Kommunkod, Kommunnamn, DeSO, RegSO)%>%
+  mutate(RegSO = str_trim(RegSO))
 
 
 
@@ -79,7 +80,7 @@ sf_result <-
 
 sf_result_regso <-
   sf_regso_dalarna %>%
-  inner_join(
+  left_join(
     dt %>% 
       inner_join(
         dt_koppling %>% select(DeSO, RegSO), by=c("Deso" = "DeSO")) %>%
@@ -97,21 +98,8 @@ sf_result_regso <-
   mutate(Doser = recode(Doser, "två.doser" = "2 doser", "minst.en.dos" = "Minst 1 dos"))
 
 
-sf_result_regso %>%
-  #as.data.table() %>%
-  as_tibble() %>%
-  #filter(Period == as.POSIXct("2021-09-29")) %>%
-  #filter(RegSO == "Ludvika norra") %>%
-  select(Period, Ålder, Doser, RegSO, Intervall, Skillnad.fg.månad) %>%
-  mutate(Skillnad.fg.månad = round(Skillnad.fg.månad,1)) %>%
-  mutate(RegSO = iconv(RegSO, to = "UTF-8")) %>%
-  select(RegSO, Ålder, Doser, Intervall) #%>%
 
-#addHtmlTableStyle(align = "r") %>% 
-#  tidyHtmlTable(value = Intervall,
-#                header =  Doser,
-#                cgroup = Ålder,
-#                rnames = RegSO)
+
 
 
 options(shiny.reactlog=TRUE)
@@ -164,9 +152,15 @@ server <- function(input, output) {
   
   sf_result_regso_filtered <- reactive({ 
     sf_result_regso %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
-      #filter(Period == input$datum) %>%
+      filter(Period == input$datum) %>%
       filter(Doser %in% input$doser) %>%
       filter(Ålder %in% input$ålder) %>%
+      select(RegSO, Ålder, Doser, Intervall, Skillnad.fg.månad, RegSO_x, RegSO_y)
+  })
+  
+  sf_result_regso_filtered_kommun <- reactive({ 
+    sf_result_regso %>% {if(input$kommun != "Alla") filter(., KOMMUNNAMN == input$kommun) else .} %>%
+      filter(Period == input$datum) %>%
       select(RegSO, Ålder, Doser, Intervall, Skillnad.fg.månad, RegSO_x, RegSO_y)
   })
   
@@ -185,11 +179,8 @@ server <- function(input, output) {
   })
   
   output$tabellAktuelltLäge <- renderUI({
-    sf_result_regso  %>%
-      filter(Period == as.POSIXct("2021-09-29"))%>%
+    sf_result_regso_filtered_kommun()  %>%
       as.data.table() %>%
-      #mutate(RegSO = iconv(RegSO, to = "UTF-8")) %>%
-      
       addHtmlTableStyle(align = "r") %>% 
         tidyHtmlTable(value = Intervall,
                       header =  Doser,
