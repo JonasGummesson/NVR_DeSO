@@ -34,15 +34,21 @@ sf_result_regso  %>%
 
 ?scale_fill_viridis
 
-sf_result_regso_ålder  %>%
+sf_result_regso  %>%
   as.data.table() %>%
   filter(KOMMUNNAMN == "Falun") %>%
-  filter(Period == as.POSIXct("2021-09-29")) %>%
+  #filter(Period == as.POSIXct("2021-09-29")) %>%
   filter(Doser %in% "Minst 1 dos") %>%
-  filter(Ålder %in% "18-64") %>%
-  addHtmlTableStyle(align = "r") %>% 
-  tidyHtmlTable(value = Intervall,
-                header =  Doser,
-                cgroup = Ålder,
-                rnames = RegSO)
-
+  mutate(Procent = round(Procent,1)) %>%
+  select(RegSO, Period, Procent) %>%
+  ungroup() %>%
+  pivot_wider(id_cols = RegSO, names_from = Period, values_from = Procent) %>%
+  #mutate(test = .[[2]])
+  mutate(Skillnad = round(.[[3]]-.[[2]],1))%>%
+#  rowwise()%>%
+  mutate(across(starts_with("20") , ~cell_spec(.x, color = "white", bold = T, background = spec_color(.x, end = 0.9, option = "magma", direction = 1)))) %>%
+  #mutate(Skillnad = cell_spec(Skillnad, color = "white", bold = T, background = spec_color(Skillnad, end = 0.9, option = "magma", direction = 1))) %>%
+  #kbl(escape = F) %>%
+  kable(escape = F, align = "c") %>%
+  #kable_paper()
+  kable_classic("striped", full_width = F)
