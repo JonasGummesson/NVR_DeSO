@@ -10,18 +10,7 @@
   library(stringi)
   library(ggrepel)
   
-  dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
-    rename(två.doser = X2.doser..,
-           minst.en.dos = Minst.1.dos..,
-           Deso  =DeSO.kod) %>%
-    mutate(Period = as.POSIXct("2021-09-03"))
-  
-  
-  dt2 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-29.csv", sep=";", header=TRUE, skip=1) %>%
-    rename(två.doser = X2.doser..,
-           minst.en.dos = Minst.1.dos..,
-           Deso  =DeSO.kod) %>%
-    mutate(Period = as.POSIXct("2021-09-29"))
+
   
   ##################### Deso utan ålder ####################################
   
@@ -35,12 +24,18 @@
            minst.en.dos = Minst.1.dos..,
            Deso  =DeSO.kod) %>%
     mutate(Period = as.POSIXct("2021-09-29"))
+  dt3 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-10-26_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+    rename(två.doser = Minst.2.doser..,
+           minst.en.dos = Minst.1.dos..,
+           Deso  = DeSO.kod) %>%
+    mutate(Period = as.POSIXct("2021-10-26"))
   
   
   dt_deso <- 
       rbind(
         dt1 %>% select(Period, Deso, minst.en.dos, två.doser),
-        dt2 %>% select(Period, Deso, minst.en.dos, två.doser)
+        dt2 %>% select(Period, Deso, minst.en.dos, två.doser),
+        dt3 %>% select(Period, Deso, minst.en.dos, två.doser)
       ) %>%
       pivot_longer(cols = c(minst.en.dos, två.doser), names_to = "Doser", values_to = "Procent") %>%
     group_by(Deso, Doser) %>%
@@ -82,7 +77,15 @@
     inner_join(dt_deso, by=c("Deso" = "Deso")) %>%
     inner_join(sf_kommuner_dalarna %>% as.data.table() %>% select(KOMMUNNAMN, KOMMUNKOD) %>% mutate(Kommunkod = as.integer(KOMMUNKOD)), by=c("Kommunkod" = "Kommunkod"))
   
+  # data till dalarnas tidningar
+#dalarnasTidningarExport <-  dt_deso %>% 
+    #filter(Period == as.POSIXct("2021-10-26")) %>%
+    #inner_join(
+     # dt_koppling %>% select(DeSO, RegSO, Kommunnamn), by=c("Deso" = "DeSO"))# %>%
+  #write.csv(dalarnasTidningarExport, file="E:/Filer/admgumjon/dalarnasTidningarExport.csv",row.names=TRUE)
+
   
+
   
   sf_result_regso <-
     sf_regso_dalarna %>%
@@ -233,16 +236,16 @@
         as.data.table() %>%
         pivot_wider(id_cols = RegSO, names_from = Period, values_from = Procent) %>%
         
-        mutate(Skillnad = round(.[[3]]-.[[2]],0))%>%
+        mutate(Skillnad = round(.[[4]]-.[[3]],0))%>%
         #rename(`Skillnad %` = Skillnad) %>%
         mutate(across(starts_with("20") , ~round(.x,0))) %>%
         arrange(desc(Skillnad)) %>%
         #mutate(Skillnad = sprintf("%.1f", Skillnad)) %>%
         mutate(across(starts_with("20") , ~cell_spec(.x,  bold = T, color = spec_color(.x, end = 0.9, option = "magma", direction = 1)))) %>%
         mutate(Skillnad = cell_spec(Skillnad, color = "white", bold = T, background = spec_color(Skillnad, end = 0.9, option = "magma", direction = 1))) %>%
-        kable(escape = F, align = "lrrr", digits = 1) %>%
+        kable(escape = F, align = "lrrrr", digits = 1) %>%
         kable_classic("striped", full_width = F)%>%
-        column_spec(1:4, width_min = "5em", bold = FALSE, italic = FALSE)
+        column_spec(1:5, width_min = "5em", bold = FALSE, italic = FALSE)
     }
     
   }
