@@ -13,35 +13,39 @@
 
   
   ##################### Deso utan ålder ####################################
+# denna kod flyttad till Vaccinering_RegSO_DeSO_LaddaData.R!!
+    
   
-  dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03_PerDeso.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
-    rename(två.doser = X2.doser..,
-           minst.en.dos = Minst.1.dos..,
-           Deso  =DeSO.kod) %>%
-    mutate(Period = as.POSIXct("2021-09-03"))
-  dt2 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-29_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
-    rename(två.doser = X2.doser..,
-           minst.en.dos = Minst.1.dos..,
-           Deso  =DeSO.kod) %>%
-    mutate(Period = as.POSIXct("2021-09-29"))
-  dt3 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-10-26_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
-    rename(två.doser = Minst.2.doser..,
-           minst.en.dos = Minst.1.dos..,
-           Deso  = DeSO.kod) %>%
-    mutate(Period = as.POSIXct("2021-10-26"))
+#  dt1 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-03_PerDeso.csv", sep=";", header=TRUE, skip=1) %>% #head(5) %>%
+#    rename(minst.två.doser = X2.doser..,
+#           minst.en.dos = Minst.1.dos..,
+#           Deso  =DeSO.kod) %>%
+#    mutate(Period = as.POSIXct("2021-09-03"))
+#  dt2 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-09-29_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+#    rename(minst.två.doser = X2.doser..,
+#           minst.en.dos = Minst.1.dos..,
+##           Deso  =DeSO.kod) %>%
+#    mutate(Period = as.POSIXct("2021-09-29"))
+#  dt3 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-10-26_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+#    rename(minst.två.doser = Minst.2.doser..,
+#           minst.en.dos = Minst.1.dos..,
+#           Deso  = DeSO.kod) %>%
+#    mutate(Period = as.POSIXct("2021-10-26"))
+  
+  grunddata_nvr <- dbGetQuery(conn_analys, "select * from NVR_RegSO_Deso") %>% 
+    mutate(Period = as.Date(Period)) %>% 
+    #mutate(SenastePeriod = ifelse(max(Period) == Period, 1, 0)) %>%
+    as_tibble()
   
   
   dt_deso <- 
-      rbind(
-        dt1 %>% select(Period, Deso, minst.en.dos, två.doser),
-        dt2 %>% select(Period, Deso, minst.en.dos, två.doser),
-        dt3 %>% select(Period, Deso, minst.en.dos, två.doser)
-      ) %>%
-      pivot_longer(cols = c(minst.en.dos, två.doser), names_to = "Doser", values_to = "Procent") %>%
+    grunddata_nvr %>%
+      pivot_longer(cols = c(minst.en.dos, minst.två.doser), names_to = "Doser", values_to = "Procent") %>%
     group_by(Deso, Doser) %>%
     mutate(Procent = as.integer(Procent))%>%
     mutate(Procent.fg = lag(Procent, n = 1, order_by = Period)) %>%
     mutate(Skillnad.fg.månad = Procent - Procent.fg) 
+  
   ################## ladda kommunkartor #################
   
   sf_kommuner_dalarna <- st_read(dsn = "E:/Filer/admgumjon/Kommungränser_Dalarna") %>%
