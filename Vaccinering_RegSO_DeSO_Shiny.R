@@ -9,7 +9,8 @@
   library(data.table)
   library(stringi)
   library(ggrepel)
-  
+library(DBI)  
+  library(odbc)
 
   
   ##################### Deso utan ålder ####################################
@@ -31,13 +32,14 @@
 #           minst.en.dos = Minst.1.dos..,
 #           Deso  = DeSO.kod) %>%
 #    mutate(Period = as.POSIXct("2021-10-26"))
-  
-  grunddata_nvr <- dbGetQuery(conn_analys, "select * from NVR_RegSO_Deso") %>% 
+conn_analys <- DBI::dbConnect(odbc::odbc(), Driver = "SQL Server", Server = "analys.ltdalarna.se", Database = "Analys", Trusted_Connection = "True", Encoding = "windows-1252")
+
+grunddata_nvr <- dbGetQuery(conn_analys, "select * from NVR_RegSO_Deso") %>% 
     mutate(Period = as.Date(Period)) %>% 
-    #mutate(SenastePeriod = ifelse(max(Period) == Period, 1, 0)) %>%
     as_tibble()
   
   
+ 
   dt_deso <- 
     grunddata_nvr %>%
       pivot_longer(cols = c(minst.en.dos, minst.två.doser), names_to = "Doser", values_to = "Procent") %>%
@@ -106,7 +108,7 @@
     
     mutate(RegSO_x = st_coordinates(st_centroid(geometry))[,1],
            RegSO_y = st_coordinates(st_centroid(geometry))[,2]) %>%
-    mutate(Doser = recode(Doser, "två.doser" = "2 doser", "minst.en.dos" = "Minst 1 dos"))# %>%
+    mutate(Doser = recode(Doser, "minst.två.doser" = "Minst 2 doser", "minst.en.dos" = "Minst 1 dos"))# %>%
    # group_by(RegSO, Doser) %>%
     #mutate(Procent.fg = lag(Procent, order_by = Period))
   
@@ -122,8 +124,8 @@
       sidebarPanel( 
         radioButtons(inputId = "doser",
                      label = "Doser",
-                     choices = list("Minst 1 dos","2 doser"),
-                     selected = c("Minst 1 dos")),
+                     choices = unique(sf_result_regso$Doser),
+                     selected = max(sf_result_regso$Doser)),
         radioButtons(inputId = "kommun",
                      label = "Kommun",
                      choices = append("Alla", unique(sf_kommuner_dalarna$KOMMUNNAMN)),
@@ -169,6 +171,7 @@
         mutate(Period = format(Period, "%Y%m%d"))%>%
         mutate(Procent = round(Procent,1))%>%
         select(RegSO, Doser, Procent, Skillnad.fg.månad, RegSO_x, RegSO_y, Period)
+    
     })
     
     ################# DeSO  #########################
@@ -240,7 +243,7 @@
         as.data.table() %>%
         pivot_wider(id_cols = RegSO, names_from = Period, values_from = Procent) %>%
         
-        mutate(Skillnad = round(.[[4]]-.[[3]],0))%>%
+        mutate(Skillnad = round(.[[5]]-.[[4]],0))%>%
         #rename(`Skillnad %` = Skillnad) %>%
         mutate(across(starts_with("20") , ~round(.x,0))) %>%
         arrange(desc(Skillnad)) %>%
