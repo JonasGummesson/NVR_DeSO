@@ -242,16 +242,16 @@ grunddata_nvr <- dbGetQuery(conn_analys, "select * from NVR_RegSO_Deso") %>%
       sf_result_regso_filtered_trend()  %>%
         as.data.table() %>%
         pivot_wider(id_cols = RegSO, names_from = Period, values_from = Procent) %>%
-        mutate(Skillnad = round(.[[6]]-.[[5]],0))%>%
+        mutate(Skillnad = round(.[[7]]-.[[6]],0))%>%
         #rename(`Skillnad %` = Skillnad) %>%
         mutate(across(starts_with("20") , ~round(.x,0))) %>%
         arrange(desc(Skillnad)) %>%
         #mutate(Skillnad = sprintf("%.1f", Skillnad)) %>%
         mutate(across(starts_with("20") , ~cell_spec(.x,  bold = T, color = spec_color(.x, end = 0.9, option = "magma", direction = 1)))) %>%
         mutate(Skillnad = cell_spec(Skillnad, color = "white", bold = T, background = spec_color(Skillnad, end = 0.9, option = "magma", direction = 1))) %>%
-        kable(escape = F, align = "lcccccc", digits = 1) %>%
+        kable(escape = F, align = "lccccccc", digits = 1) %>%
         kable_classic("striped", full_width = F)%>%
-        column_spec(1:5, width_min = "5em", bold = FALSE, italic = FALSE)
+        column_spec(1:7, width_min = "5em", bold = FALSE, italic = FALSE)
     }
     
   }
