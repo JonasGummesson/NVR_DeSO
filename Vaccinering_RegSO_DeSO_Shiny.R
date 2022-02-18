@@ -242,7 +242,7 @@ grunddata_nvr <- dbGetQuery(conn_analys, "select * from NVR_RegSO_Deso") %>%
       sf_result_regso_filtered_trend()  %>%
         as.data.table() %>%
         pivot_wider(id_cols = RegSO, names_from = Period, values_from = Procent) %>%
-        mutate(Skillnad = round(.[[7]]-.[[6]],0))%>%
+        mutate(Skillnad = round(.[[8]]-.[[7]],0))%>%
         #rename(`Skillnad %` = Skillnad) %>%
         mutate(across(starts_with("20") , ~round(.x,0))) %>%
         arrange(desc(Skillnad)) %>%
