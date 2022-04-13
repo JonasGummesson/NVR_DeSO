@@ -30,11 +30,39 @@ dt3 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning
          minst.en.dos = Minst.1.dos..,
          Deso  = DeSO.kod) %>%
   mutate(Period = as.POSIXct("2021-10-26"))
-
+dt4 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-11-24_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+  rename(minst.två.doser = Minst.2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  = DeSO.kod) %>%
+  mutate(Period = as.POSIXct("2021-11-24"))
+dt5 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2021-12-21_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+  rename(minst.två.doser = Minst.2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  = DeSO.kod) %>%
+  mutate(Period = as.POSIXct("2021-12-21"))
+dt6 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2022-01-18_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+  rename(minst.två.doser = Minst.2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  = DeSO.kod) %>%
+  mutate(Period = as.POSIXct("2022-01-18"))
+dt7 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2022-02-17_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+  rename(minst.två.doser = Minst.2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  = DeSO.kod) %>%
+  mutate(Period = as.POSIXct("2022-02-17"))
+dt8 <- read.csv(file = "E:/Filer/admgumjon/NVR_Deso/Dalarna_vaccinationstackning_DeSO_NVR_SCB_2022-04-12_PerDeso.csv", sep=";", header=TRUE, skip=1) %>%
+  rename(minst.två.doser = Minst.2.doser..,
+         minst.en.dos = Minst.1.dos..,
+         Deso  = DeSO.kod) %>%
+  mutate(Period = as.POSIXct("2022-04-12"))
 
 dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt1, overwrite=TRUE, append = FALSE)
 dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt2, overwrite=FALSE, append = TRUE)
 dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt3, overwrite=FALSE, append = TRUE)
-
+dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt4, overwrite=FALSE, append = TRUE)
+dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt5[,c(1:3,5)], overwrite=FALSE, append = TRUE)
+dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt6[,c(1:3,5)], overwrite=FALSE, append = TRUE)
+dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt7[,c(1:3,5)], overwrite=FALSE, append = TRUE)
+dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = dt8[,c(1:3,5)], overwrite=FALSE, append = TRUE)
 
 
