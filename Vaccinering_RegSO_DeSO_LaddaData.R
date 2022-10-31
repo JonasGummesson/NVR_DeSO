@@ -106,3 +106,4 @@ z <- rbind(dt1[,c(1,3,2,4:7)],
 
 dbWriteTable(conn_analys, name = Id(schema = "dbo", table = "NVR_RegSO_Deso"), value = z, overwrite=TRUE, append = FALSE)
 
+colnames(z)
